@@ -77,9 +77,55 @@ React. Required screens:
 
 ---
 
+## Project Implementation Roadmap & Phases
+
+- `[x]` **Phase 1: Foundation & Scaffold**
+  - Architecture decisions locked & documented
+  - Monorepo scaffold: FastAPI backend (`uv`), Next.js frontend (`pnpm`), Docker Compose
+  - GitHub repo setup & README documentation
+
+- `[ ]` **Phase 2: Core Data Models & Migration System**
+  - Database schema design (Accounts, Transactions, Idempotency Keys, Outbox Ledger, Audit Log)
+  - SQLAlchemy Async models setup
+  - Alembic migrations setup & initial migration execution
+
+- `[ ]` **Phase 3: Plaid Sandbox Integration**
+  - Plaid client initialization (Sandbox environment)
+  - Link token creation and public token exchange endpoints
+  - Fetch & sync sandbox account balances and transaction data
+
+- `[ ]` **Phase 4: Risk Evaluator & Human-in-the-Loop Approval Queue**
+  - Deterministic risk scoring rubric (points & tier evaluation)
+  - Outbox Pattern execution boundary (`pending` → Plaid execution → `confirmed` / `failed`)
+  - ARQ background job worker queue & Dead Letter Queue (DLQ) handling
+  - Human approval & rejection API endpoints
+
+- `[ ]` **Phase 5: Tamper-Evident Audit Trail System**
+  - Cryptographic hash-chaining logic for audit events (`prev_hash` calculation)
+  - ARQ background periodic job for hash-chain integrity verification & alerting
+
+- `[ ]` **Phase 6: Next.js Dashboard UI & WebSocket Live Feed**
+  - WebSocket backend router for real-time agent activity streaming
+  - **Accounts Overview Screen** (Balances & transactions live sync)
+  - **Pending Approvals Screen** (Human approval queue control surface)
+  - **Audit Trail Viewer** (Filterable timeline & cryptographic verification status)
+  - **Agent Activity Feed** (Live WebSocket stream)
+
+- `[ ]` **Phase 7: LLM Agent Integration & Tool Calling**
+  - AI Agent service with tool-calling capabilities (Categorize, Transfer, Flag Anomaly)
+  - Integration with Risk Evaluator & Approval Queue
+
+- `[ ]` **Phase 8: Testing, Security, Polish & Deployment**
+  - Unit & integration tests (`pytest`)
+  - Error handling, production logging, and security verification
+  - Render deployment configuration & container build validation
+
+---
+
 ## Current Status
 
 ```txt
-Open questions resolved: 6 / 6
-All architecture decisions locked. Ready to move to implementation.
+Architecture Open Questions Resolved: 6 / 6
+Current Active Phase: Phase 2 — Core Data Models & Migration System
+Next Step: Define SQLAlchemy models for Accounts, Transactions, Idempotency Keys, Ledger, and Audit Log.
 ```
