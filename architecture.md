@@ -84,7 +84,7 @@ React. Required screens:
   - Monorepo scaffold: FastAPI backend (`uv`), Next.js frontend (`pnpm`), Docker Compose
   - GitHub repo setup & README documentation
 
-- `[ ]` **Phase 2: Core Data Models & Migration System**
+- `[x]` **Phase 2: Core Data Models & Migration System**
   - Database schema design (Accounts, Transactions, Idempotency Keys, Outbox Ledger, Audit Log)
   - SQLAlchemy Async models setup
   - Alembic migrations setup & initial migration execution
@@ -126,6 +126,6 @@ React. Required screens:
 
 ```txt
 Architecture Open Questions Resolved: 6 / 6
-Current Active Phase: Phase 2 — Core Data Models & Migration System
-Next Step: Define SQLAlchemy models for Accounts, Transactions, Idempotency Keys, Ledger, and Audit Log.
+Current Active Phase: Phase 3 — Plaid Sandbox Integration
+Next Step: Initialize Plaid client and implement link token & token exchange endpoints.
 ```
