@@ -11,6 +11,8 @@ from sqlalchemy.future import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from plaid.model.accounts_balance_get_request import AccountsBalanceGetRequest
 from app.models.account import Account
+from plaid.model.transactions_sync_request import TransactionsSyncRequest
+from app.models.transaction import Transaction
 
 
 def get_plaid_client() -> plaid_api.PlaidApi:
@@ -100,4 +102,83 @@ async def sync_accounts(access_token: str, session: AsyncSession, item_id: str):
       await session.rollback()
       logger.error(f"Error syncing accounts: {e}")
       raise 
+
+async def sync_transactions(access_token:str, session: AsyncSession):
+   client = get_plaid_client()
+   added, modified, removed = [], [], []
+   has_more = True
+   cursor = None
+
+   try:
+
+      while has_more:
+         transaction = TransactionsSyncRequest(
+            access_token=access_token, 
+            cursor=cursor, 
+            count=50
+         )
+         response = client.transactions_sync(transaction)
+         added.extend(response.added)
+         modified.extend(response.modified)
+         removed.extend(response.removed)
+         cursor = response.next_cursor
+         has_more = response.has_more
+
+      for pl_txn in added:
+         result = await session.execute(
+            select(Account).where(Account.plaid_account_id == pl_txn.account_id)
+         )
+
+         db_account = result.scalar_one_or_none()
+         if db_account is None:
+            continue
+
+         account_id = db_account.id
+
+         new_transaction = Transaction(
+            account_id = account_id,
+            plaid_transaction_id = pl_txn.transaction_id,
+            amount = pl_txn.amount,
+            date = pl_txn.date,
+            name = pl_txn.name,
+            merchant_name = pl_txn.merchant_name,
+            category = ", ".join(pl_txn.category) if pl_txn.category else None,
+            pending = pl_txn.pending,
+            raw_payload = pl_txn.to_dict()
+         )
+         session.add(new_transaction)
+   
+      for pl_txn in modified:
+         update_txn = select(Transaction).where(Transaction.plaid_transaction_id == pl_txn.transaction_id)
+         result = await session.execute(update_txn)
+         db_txn = result.scalar_one_or_none()
+
+         if db_txn:
+            db_txn.amount = pl_txn.amount
+            db_txn.date = pl_txn.date
+            db_txn.name = pl_txn.name
+            db_txn.merchant_name = pl_txn.merchant_name
+            db_txn.category = ", ".join(pl_txn.category) if pl_txn.category else None
+            db_txn.pending = pl_txn.pending
+            db_txn.raw_payload = pl_txn.to_dict()
+
+      for pl_txn in removed:
+         remove_txn = select(Transaction).where(Transaction.plaid_transaction_id == pl_txn.transaction_id)
+         result = await session.execute(remove_txn)
+         db_txn = result.scalar_one_or_none()
+
+         if db_txn:
+            await session.delete(db_txn)
+
+      transactions_synced = len(added) + len(modified) - len(removed)
+
+      await session.commit()
+
+      return {"transactions_synced": transactions_synced}
+
+   except Exception as e:
+      await session.rollback()
+      logger.error(f"Error syncing transactions: {e}")
+      raise
+      
 
