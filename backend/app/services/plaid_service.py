@@ -1,3 +1,4 @@
+from app.main import logger
 import plaid
 from plaid.api import plaid_api
 from plaid.model.link_token_create_request import LinkTokenCreateRequest
@@ -6,6 +7,10 @@ from plaid.model.products import Products
 from plaid.model.country_code import CountryCode
 from plaid.model.item_public_token_exchange_request import ItemPublicTokenExchangeRequest
 from app.core.config import settings
+from sqlalchemy.future import select
+from sqlalchemy.ext.asyncio import AsyncSession
+from plaid.model.accounts_balance_get_request import AccountsBalanceGetRequest
+from app.models.account import Account
 
 
 def get_plaid_client() -> plaid_api.PlaidApi:
@@ -52,3 +57,47 @@ def exchange_public_token(public_token: str):
 
    response = client.item_public_token_exchange(request)
    return response.to_dict()
+
+async def sync_accounts(access_token: str, session: AsyncSession, item_id: str):
+   client = get_plaid_client()
+
+   try:
+      request = AccountsBalanceGetRequest(access_token=access_token)
+      response = client.accounts_balance_get(request)
+
+      for pl_acc in response.accounts:
+         check_db = select(Account).where(Account.plaid_account_id == pl_acc.account_id)
+         result = await session.execute(check_db)
+         db_account = result.scalar_one_or_none()
+
+         if db_account:
+            db_account.name = pl_acc.name
+            db_account.official_name = pl_acc.official_name
+            db_account.mask = pl_acc.mask
+            db_account.balance_available = pl_acc.balances.available
+            db_account.balance_current = pl_acc.balances.current
+            db_account.iso_currency_code = pl_acc.balances.iso_currency_code or "USD"
+
+         else:
+            new_acc = Account(
+               item_id=str(item_id),
+               plaid_account_id = str(pl_acc.account_id),
+               name = str(pl_acc.name),
+               official_name = str(pl_acc.official_name),
+               mask = str(pl_acc.mask),
+               balance_available = pl_acc.balances.available,
+               balance_current = pl_acc.balances.current,
+               iso_currency_code = pl_acc.balances.iso_currency_code,
+               type = str(pl_acc.type),
+               subtype = str(pl_acc.subtype)
+            )
+            session.add(new_acc)
+
+      await session.commit()
+      return {"success": True}
+
+   except Exception as e:
+      await session.rollback()
+      logger.error(f"Error syncing accounts: {e}")
+      raise 
+
