@@ -20,6 +20,10 @@ class PublicTokenExchangeResponse(BaseModel):
     access_token: str
     item_id: str
 
+class SyncRequest(BaseModel):
+    access_token: str
+    item_id: str
+
 
 class AccountResponse(BaseModel):
     id: int
@@ -55,3 +59,4 @@ class TransactionResponse(BaseModel):
 class SyncResponse(BaseModel):
     accounts_synced: int
     transactions_synced: int
+

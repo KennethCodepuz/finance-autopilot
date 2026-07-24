@@ -2,7 +2,7 @@ import logging
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-
+from app.routes import plaid
 from app.core.config import settings
 
 logging.basicConfig(level=settings.log_level)
@@ -23,6 +23,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+app.include_router(plaid.router)
 
 
 @app.get("/api/health")

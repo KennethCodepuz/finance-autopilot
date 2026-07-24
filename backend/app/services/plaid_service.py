@@ -15,6 +15,15 @@ from plaid.model.transactions_sync_request import TransactionsSyncRequest
 from app.models.transaction import Transaction
 
 
+
+async def get_accounts(db: AsyncSession):
+   accounts = await db.execute(select(Account))
+   return accounts.scalars().all()
+
+async def get_transactions(db: AsyncSession):
+   transactions = await db.execute(select(Transaction))
+   return transactions.scalars().all()
+
 def get_plaid_client() -> plaid_api.PlaidApi:
     """Initializes and returns the Plaid API client."""
     host = plaid.Environment.Sandbox
