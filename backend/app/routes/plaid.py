@@ -34,3 +34,8 @@ async def get_accounts(db: AsyncSession = Depends(get_db)):
 async def get_transactions(db: AsyncSession = Depends(get_db)):
    transactions = await ps.get_transactions(db)
    return transactions
+
+@router.post("/sandbox/create-token")
+async def create_sandbox_public_token():
+   token = await ps.create_sandbox_public_token()
+   return token

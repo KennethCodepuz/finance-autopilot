@@ -1,5 +1,6 @@
-from app.main import logger
+import logging
 import plaid
+import json
 from plaid.api import plaid_api
 from plaid.model.link_token_create_request import LinkTokenCreateRequest
 from plaid.model.link_token_create_request_user import LinkTokenCreateRequestUser
@@ -12,8 +13,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from plaid.model.accounts_balance_get_request import AccountsBalanceGetRequest
 from app.models.account import Account
 from plaid.model.transactions_sync_request import TransactionsSyncRequest
+from plaid.model.sandbox_public_token_create_request import SandboxPublicTokenCreateRequest
 from app.models.transaction import Transaction
 
+logger = logging.getLogger(__name__)
 
 
 async def get_accounts(db: AsyncSession):
@@ -121,12 +124,19 @@ async def sync_transactions(access_token:str, session: AsyncSession):
    try:
 
       while has_more:
-         transaction = TransactionsSyncRequest(
-            access_token=access_token, 
-            cursor=cursor, 
-            count=50
-         )
-         response = client.transactions_sync(transaction)
+         if cursor:
+            request = TransactionsSyncRequest(
+                access_token=access_token,
+                cursor=cursor,
+                count=50,
+            )
+         else:
+               request = TransactionsSyncRequest(
+                access_token=access_token,
+                count=50,
+            )
+            
+         response = client.transactions_sync(request)
          added.extend(response.added)
          modified.extend(response.modified)
          removed.extend(response.removed)
@@ -153,7 +163,7 @@ async def sync_transactions(access_token:str, session: AsyncSession):
             merchant_name = pl_txn.merchant_name,
             category = ", ".join(pl_txn.category) if pl_txn.category else None,
             pending = pl_txn.pending,
-            raw_payload = pl_txn.to_dict()
+            raw_payload = json.loads(json.dumps(pl_txn.to_dict(), default=str))
          )
          session.add(new_transaction)
    
@@ -169,7 +179,7 @@ async def sync_transactions(access_token:str, session: AsyncSession):
             db_txn.merchant_name = pl_txn.merchant_name
             db_txn.category = ", ".join(pl_txn.category) if pl_txn.category else None
             db_txn.pending = pl_txn.pending
-            db_txn.raw_payload = pl_txn.to_dict()
+            db_txn.raw_payload = json.loads(json.dumps(pl_txn.to_dict(), default=str))
 
       for pl_txn in removed:
          remove_txn = select(Transaction).where(Transaction.plaid_transaction_id == pl_txn.transaction_id)
@@ -191,3 +201,13 @@ async def sync_transactions(access_token:str, session: AsyncSession):
       raise
       
 
+async def create_sandbox_public_token():
+   client = get_plaid_client()
+   request = SandboxPublicTokenCreateRequest(
+      institution_id="ins_109508",
+      initial_products=[Products("transactions")]
+   )
+
+   response = client.sandbox_public_token_create(request)
+
+   return response.to_dict()
