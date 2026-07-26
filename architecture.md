@@ -89,7 +89,7 @@ React. Required screens:
   - SQLAlchemy Async models setup
   - Alembic migrations setup & initial migration execution
 
-- `[ ]` **Phase 3: Plaid Sandbox Integration**
+- `[x]` **Phase 3: Plaid Sandbox Integration**
   - Plaid client initialization (Sandbox environment)
   - Link token creation and public token exchange endpoints
   - Fetch & sync sandbox account balances and transaction data
@@ -126,6 +126,6 @@ React. Required screens:
 
 ```txt
 Architecture Open Questions Resolved: 6 / 6
-Current Active Phase: Phase 3 — Plaid Sandbox Integration
-Next Step: Initialize Plaid client and implement link token & token exchange endpoints.
+Current Active Phase: Phase 4 — Risk Evaluator & Human-in-the-Loop Approval Queue
+Next Step: Implement deterministic risk scoring rubric and outbox pattern execution boundary.
 ```
