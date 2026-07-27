@@ -1,6 +1,8 @@
 import arq.connections
 
 from app.core.config import settings
+from app.workers.task import execute_ledger_entry
+from app.core.database import async_session_factory
 
 
 async def startup(ctx: dict) -> None:
@@ -12,15 +14,9 @@ async def shutdown(ctx: dict) -> None:
     """Runs once when the worker shuts down."""
     pass
 
-async def execute_ledger_entry(ctx: dict, ledger_id: int):
-
-   pass
-
 class WorkerSettings:
     """ARQ worker configuration."""
-    functions = [
-        execute_ledger_entry,
-    ]
+    functions = [execute_ledger_entry]
     on_startup = startup
     on_shutdown = shutdown
     redis_settings = arq.connections.RedisSettings.from_dsn(settings.redis_url)

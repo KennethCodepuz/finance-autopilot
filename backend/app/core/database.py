@@ -30,3 +30,6 @@ async def get_db() -> AsyncSession:
             raise
         finally:
             await session.close()
+
+async def async_session_factory() -> AsyncSession:
+    return AsyncSessionLocal()
