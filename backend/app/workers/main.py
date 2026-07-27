@@ -12,10 +12,15 @@ async def shutdown(ctx: dict) -> None:
     """Runs once when the worker shuts down."""
     pass
 
+async def execute_ledger_entry(ctx: dict, ledger_id: int):
+
+   pass
 
 class WorkerSettings:
     """ARQ worker configuration."""
-    functions = []  # job functions registered here as built
+    functions = [
+        execute_ledger_entry,
+    ]
     on_startup = startup
     on_shutdown = shutdown
     redis_settings = arq.connections.RedisSettings.from_dsn(settings.redis_url)
