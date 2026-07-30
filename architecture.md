@@ -94,7 +94,7 @@ React. Required screens:
   - Link token creation and public token exchange endpoints
   - Fetch & sync sandbox account balances and transaction data
 
-- `[ ]` **Phase 4: Risk Evaluator & Human-in-the-Loop Approval Queue**
+- `[x]` **Phase 4: Risk Evaluator & Human-in-the-Loop Approval Queue**
   - Deterministic risk scoring rubric (points & tier evaluation)
   - Outbox Pattern execution boundary (`pending` → Plaid execution → `confirmed` / `failed`)
   - ARQ background job worker queue & Dead Letter Queue (DLQ) handling
@@ -126,6 +126,6 @@ React. Required screens:
 
 ```txt
 Architecture Open Questions Resolved: 6 / 6
-Current Active Phase: Phase 4 — Risk Evaluator & Human-in-the-Loop Approval Queue
-Next Step: Implement deterministic risk scoring rubric and outbox pattern execution boundary.
+Current Active Phase: Phase 5 — Tamper-Evident Audit Trail System
+Next Step: Implement cryptographic hash-chaining logic for audit events.
 ```

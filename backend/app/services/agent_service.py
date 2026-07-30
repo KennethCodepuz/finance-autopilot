@@ -1,3 +1,4 @@
+
 from app.models import AuditLog
 from datetime import timedelta
 from datetime import timezone
@@ -8,6 +9,7 @@ from app.services.risk_service import calculate_risk_score
 from app.models.ledger import OutboxLedger
 from sqlalchemy.ext.asyncio import AsyncSession
 import uuid, hashlib, json
+from sqlalchemy import func, select
 
 async def propose_action(action_type, amount, payee, account_id, session: AsyncSession, redis: ArqRedis):
 
@@ -41,8 +43,13 @@ async def propose_action(action_type, amount, payee, account_id, session: AsyncS
       session.add(ledger_entry)
       await session.flush()
 
+      max_seq_req = await session.execute(select(func.max(AuditLog.sequence_number)))
+      max_seq = (max_seq_req.scalar_one_or_none() or 0) + 1
+      
+      
       audit_log = AuditLog(
          actor_type="agent",
+         sequence_number=max_seq,
          actor_id="agent_default",
          action="action_proposed",
          target_type="transaction",
