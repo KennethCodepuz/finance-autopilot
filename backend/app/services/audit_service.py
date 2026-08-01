@@ -4,7 +4,7 @@ from sqlalchemy import select, func
 import hashlib, json
 from datetime import datetime, timezone
 
-async def calculate_audit_hash(prev_audit_entry: AuditLog, session: AsyncSession, target_id: int, target_type: str, actor_id: str, action: str, actor_type: str):
+async def calculate_audit_hash(prev_audit_entry: AuditLog, session: AsyncSession, audit_payload: dict, target_id: int, target_type: str, actor_id: str, action: str, actor_type: str):
    try:
       if prev_audit_entry:
          prev_hash = prev_audit_entry.current_hash
@@ -24,7 +24,8 @@ async def calculate_audit_hash(prev_audit_entry: AuditLog, session: AsyncSession
          "actor_type": actor_type,
          "action": action,
          "target_type": target_type,
-         "target_id": str(target_id)
+         "target_id": str(target_id),
+         "payload": audit_payload,
       }
       
       audit_log = AuditLog(

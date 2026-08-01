@@ -48,13 +48,13 @@ async def test_propose_action_low_risk(db_session: AsyncSession):
     assert ledger_entry.risk_tier == "low"
     
     # Verify Redis enqueue was called
-    mock_redis.enqueue_job.assert_called_once_with("execute_transaction", ledger_entry.id)
+    mock_redis.enqueue_job.assert_called_once_with("execute_ledger_entry", ledger_entry.id)
     
     # Verify Audit log was created
     audit = await db_session.execute(select(AuditLog).where(AuditLog.target_id == str(ledger_entry.id)))
     audit_entry = audit.scalars().first()
     assert audit_entry is not None
-    assert audit_entry.action == "action_proposed"
+    assert audit_entry.action == "proposal.created"
 
 @pytest.mark.asyncio
 async def test_propose_action_high_risk(db_session: AsyncSession):

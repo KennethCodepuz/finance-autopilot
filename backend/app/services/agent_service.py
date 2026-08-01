@@ -45,15 +45,16 @@ async def propose_action(action_type, amount, payee, account_id, session: AsyncS
       session.add(ledger_entry)
       await session.flush()
 
+
       prev_audit_entry = await get_last_audit_log(session)
 
-      audit_log = await calculate_audit_hash(prev_audit_entry, session, ledger_entry.id, "ledger_entry", "agent_default", "ledger_entry.created", "agent")
+      audit_log = await calculate_audit_hash(prev_audit_entry, session, payload, ledger_entry.id, "ledger", "agent_default", "proposal.created", "agent")
 
       session.add(audit_log)
       await session.commit()
 
       if risk_score["tier"] == "low":
-         await redis.enqueue_job("execute_transaction", ledger_entry.id)
+         await redis.enqueue_job("execute_ledger_entry", ledger_entry.id)
       
       if risk_score["tier"] == "high":
          """ Await Human Approval """

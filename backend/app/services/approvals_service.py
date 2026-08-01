@@ -1,4 +1,6 @@
 
+from app.services.audit_service import calculate_audit_hash
+from app.repositories.audits import get_last_audit_log
 from app.models import AuditLog
 from fastapi import HTTPException
 from app.schemas.approvals import ActionProposalRequest, ActionProposalResponse
@@ -46,19 +48,9 @@ async def approve_proposal_action(ledger_id: int, session: AsyncSession = Depend
       await redis.enqueue_job("execute_ledger_entry", ledger_entry.id)
       await session.flush()
 
-      max_seq_req = await session.execute(select(func.max(AuditLog.sequence_number)))
-      max_seq = (max_seq_req.scalar_one_or_none() or 0) + 1
+      prev_audit_entry = await get_last_audit_log(session)
 
-      audit_log = AuditLog(
-         actor_type="human",
-         sequence_number=max_seq,
-         actor_id="human_default",
-         action="action_approved",
-         target_id=str(ledger_entry.id),
-         payload=ledger_entry.payload,
-         current_hash=hashlib.sha256(json.dumps(ledger_entry.payload).encode()).hexdigest(),
-         prev_hash=ledger_entry.idempotency_key,
-      )
+      audit_log = await calculate_audit_hash(prev_audit_entry, session, ledger_entry.payload, ledger_entry.id, "ledger", "human", "proposal_approved", "human")
 
       session.add(audit_log)
       await session.commit()
@@ -75,19 +67,9 @@ async def reject_proposal_action(ledger_id:int, session: AsyncSession = Depends(
 
       ledger_entry.status = "rejected"  
 
-      max_seq_req = await session.execute(select(func.max(AuditLog.sequence_number)))
-      max_seq = (max_seq_req.scalar_one_or_none() or 0) + 1
+      prev_audit_entry = await get_last_audit_log(session)
 
-      audit_log = AuditLog(
-         actor_type="human",
-         sequence_number=max_seq,
-         actor_id="human_default",
-         action="action_rejected",
-         target_id=str(ledger_entry.id),
-         payload=ledger_entry.payload,
-         current_hash=hashlib.sha256(json.dumps(ledger_entry.payload).encode()).hexdigest(),
-         prev_hash=ledger_entry.idempotency_key,
-      )
+      audit_log = await calculate_audit_hash(prev_audit_entry, session, ledger_entry.payload, ledger_entry.id, "ledger", "human", "proposal_rejected", "human")
 
       session.add(audit_log)
       await session.commit()
