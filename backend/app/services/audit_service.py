@@ -1,3 +1,5 @@
+from fastapi import HTTPException
+from httpx import HTTPStatusError
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.audit import AuditLog
 from sqlalchemy import select, func
@@ -43,3 +45,21 @@ async def calculate_audit_hash(prev_audit_entry: AuditLog, session: AsyncSession
       return audit_log
    except Exception as e:
       raise
+
+def recompute_hash(audit_log: AuditLog):
+   try:
+      payload = {
+         "sequence_number": audit_log.sequence_number,
+         "timestamp": audit_log.timestamp.isoformat(),
+         "prev_hash": audit_log.prev_hash,
+         "actor_id": audit_log.actor_id,
+         "actor_type": audit_log.actor_type,
+         "action": audit_log.action,
+         "target_type": audit_log.target_type,
+         "target_id": audit_log.target_id,
+         "payload": audit_log.payload.get("payload"),
+      }
+      
+      return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+   except Exception as e:
+      raise HTTPException(status_code=500, detail="Failed to recompute hash") 

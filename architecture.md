@@ -74,6 +74,7 @@ React. Required screens:
 | 2026-07-19 | Containerization | Docker | **Docker** | Single `docker-compose.yml` runs FastAPI + PostgreSQL + Redis locally. Matches Render’s deployment model. |
 | 2026-07-19 | Deployment | Render | **Render** | Simple deploy from Git, native env var management (no `.env` file on server), supports Docker. |
 | 2026-07-20 | Frontend framework | React + Vite / Next.js | **Next.js (App Router, TypeScript)** | App Router supports server components and streaming out of the box. Built-in routing removes react-router-dom. Pairs well with WebSocket client components. pnpm used for package management. |
+| 2026-08-02 | Audit verification schedule | Weekly full scan only / Daily full scan / Hourly incremental + weekly full / Hourly incremental + daily full | **Hourly incremental + daily full scan (2 AM)** | For a financial system, 24-hour max tamper detection is the requirement. Hourly incremental (checkpoint-based) catches new tampering within ~1 hour at near-zero DB cost. Daily full scan at 2 AM off-peak catches retroactive historical tampering within 24 hours. Weekly-only full scan was rejected as too slow for financial data. |
 
 ---
 
