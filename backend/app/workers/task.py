@@ -1,10 +1,9 @@
-from app.services.audit_service import calculate_audit_hash
+
 from app.core.database import AsyncSessionLocal
-from app.models import IdempotencyKey, AuditLog, OutboxLedger
+from app.models import IdempotencyKey, OutboxLedger
 from sqlalchemy import select
-import hashlib, json
-from app.repositories.audits import get_last_audit_log
-from sqlalchemy import func
+from app.services.audit_service import create_and_verify_audit_log
+
 
 async def execute_ledger_entry(ctx: dict, ledger_id: int):
    ledger_entry = None
@@ -47,13 +46,9 @@ async def execute_ledger_entry(ctx: dict, ledger_id: int):
 
       await session.flush()
 
-      prev_audit_entry = await get_last_audit_log(session)
+      audit_log = await create_and_verify_audit_log(session, audit_payload=ledger_entry.payload, target_id=ledger_entry.id, target_type="ledger", actor_id="agent_default", action="ledger_entry.confirmed", actor_type="agent")
 
-      audit_log = await calculate_audit_hash(prev_audit_entry, session, ledger_entry.payload, ledger_entry.id, "ledger", "agent_default", "ledger_entry.confirmed", "agent")
-
-      session.add(audit_log)
-
-      await session.commit()
+      return audit_log
    except Exception as e:
       await session.rollback()
       raise

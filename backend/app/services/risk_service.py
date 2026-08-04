@@ -31,9 +31,9 @@ async def calculate_risk_score(action_type, amount, payee, session: AsyncSession
       factors.append("Payee is new: +8")
 
    if score <= 9:
-      return {"score": score,"tier": "low", "factors": factors}
+      return {"score": score, "tier": "low", "factors": factors}
    else:
-      return {"score": score,"tier": "high", "factors": factors}
+      return {"score": score, "tier": "high", "factors": factors}
 
    
    

@@ -148,6 +148,7 @@ async def test_approval_routes(db_session: AsyncSession):
         )
         assert response.status_code == 200
         high_risk_data = response.json()
+        print("RESPONSE BODY:", response.text)
         assert high_risk_data["tier"] == "high"
         
         # 3. Get pending approvals

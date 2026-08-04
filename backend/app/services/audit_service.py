@@ -50,7 +50,7 @@ def recompute_hash(audit_log: AuditLog):
    try:
       payload = {
          "sequence_number": audit_log.sequence_number,
-         "timestamp": audit_log.timestamp.isoformat(),
+         "timestamp": audit_log.payload["timestamp"],
          "prev_hash": audit_log.prev_hash,
          "actor_id": audit_log.actor_id,
          "actor_type": audit_log.actor_type,

@@ -1,6 +1,4 @@
 
-from app.services.audit_service import calculate_audit_hash
-from app.repositories.audits import get_last_audit_log
 from app.models import AuditLog
 from fastapi import HTTPException
 from app.schemas.approvals import ActionProposalRequest, ActionProposalResponse
@@ -11,8 +9,7 @@ from fastapi import Depends
 from app.repositories import approvals as approvals_repository
 from arq import ArqRedis
 from app.services.agent_service import propose_action
-import hashlib, json
-from sqlalchemy import select, func
+from app.services.audit_service import create_and_verify_audit_log
 
 async def propose_action_to_agent(request: ActionProposalRequest, session: AsyncSession = Depends(get_db), redis: ArqRedis = Depends(get_redis)  ):
 
@@ -48,14 +45,9 @@ async def approve_proposal_action(ledger_id: int, session: AsyncSession = Depend
       await redis.enqueue_job("execute_ledger_entry", ledger_entry.id)
       await session.flush()
 
-      prev_audit_entry = await get_last_audit_log(session)
+      audit_log = await create_and_verify_audit_log(session, audit_payload=ledger_entry.payload, target_id=ledger_entry.id, target_type="ledger", actor_id="human", action="proposal_approved", actor_type="human")
 
-      audit_log = await calculate_audit_hash(prev_audit_entry, session, ledger_entry.payload, ledger_entry.id, "ledger", "human", "proposal_approved", "human")
-
-      session.add(audit_log)
-      await session.commit()
-
-      return {"message": "Action approved successfully"}
+      return {"message": "Action approved successfully", "audit_log_id": audit_log.id, "risk_tier": "high"}
    except Exception as e:
       await session.rollback()
       raise HTTPException(status_code=500, detail=str(e))
@@ -67,13 +59,9 @@ async def reject_proposal_action(ledger_id:int, session: AsyncSession = Depends(
 
       ledger_entry.status = "rejected"  
 
-      prev_audit_entry = await get_last_audit_log(session)
+      audit_log = await create_and_verify_audit_log(session, audit_payload=ledger_entry.payload, target_id=ledger_entry.id, target_type="ledger", actor_id="human", action="proposal_rejected", actor_type="human")
 
-      audit_log = await calculate_audit_hash(prev_audit_entry, session, ledger_entry.payload, ledger_entry.id, "ledger", "human", "proposal_rejected", "human")
-
-      session.add(audit_log)
-      await session.commit()
-      return {"message": "Action rejected successfully"}
+      return {"message": "Action rejected successfully", "audit_log_id": audit_log.id, "risk_tier": "high"}
    except Exception as e:
       await session.rollback()
       raise HTTPException(status_code=500, detail=str(e))

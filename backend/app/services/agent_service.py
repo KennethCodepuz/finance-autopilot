@@ -1,6 +1,5 @@
 
-from app.services.audit_service import calculate_audit_hash
-from app.models import AuditLog
+
 from datetime import timedelta
 from datetime import timezone
 from datetime import datetime
@@ -10,8 +9,8 @@ from app.services.risk_service import calculate_risk_score
 from app.models.ledger import OutboxLedger
 from sqlalchemy.ext.asyncio import AsyncSession
 import uuid, hashlib, json
-from sqlalchemy import func, select
-from app.repositories.audits import get_last_audit_log
+from app.services.audit_service import create_and_verify_audit_log
+
 
 async def propose_action(action_type, amount, payee, account_id, session: AsyncSession, redis: ArqRedis):
 
@@ -45,13 +44,7 @@ async def propose_action(action_type, amount, payee, account_id, session: AsyncS
       session.add(ledger_entry)
       await session.flush()
 
-
-      prev_audit_entry = await get_last_audit_log(session)
-
-      audit_log = await calculate_audit_hash(prev_audit_entry, session, payload, ledger_entry.id, "ledger", "agent_default", "proposal.created", "agent")
-
-      session.add(audit_log)
-      await session.commit()
+      await create_and_verify_audit_log(session, audit_payload=payload, target_id=ledger_entry.id, target_type="ledger", actor_id="agent_default", action="proposal.created", actor_type="agent")
 
       if risk_score["tier"] == "low":
          await redis.enqueue_job("execute_ledger_entry", ledger_entry.id)
@@ -60,7 +53,6 @@ async def propose_action(action_type, amount, payee, account_id, session: AsyncS
          """ Await Human Approval """
          pass
          
-
       return ledger_entry
    except Exception as e:
       await session.rollback()

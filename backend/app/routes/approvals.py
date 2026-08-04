@@ -1,16 +1,11 @@
-import hashlib
-import json
-from fastapi import APIRouter, Depends, HTTPException
-from sqlalchemy import select, func
+
+from fastapi import APIRouter, Depends
 from sqlalchemy.ext.asyncio import AsyncSession
 from arq import ArqRedis
 
 from app.core.database import get_db
 from app.core.redis import get_redis
-from app.models.ledger import OutboxLedger
-from app.models.audit import AuditLog
-from app.schemas.approvals import ActionProposalRequest, ActionProposalResponse, PendingApprovalItem
-from app.repositories import approvals as approvals_repository
+from app.schemas.approvals import ActionProposalRequest
 from app.services import approvals_service as approvals_service
 
 router = APIRouter(prefix="/api/approvals", tags=["Approvals"])
