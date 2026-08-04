@@ -1,10 +1,10 @@
-from fastapi import HTTPException
-from httpx import HTTPStatusError
+
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.audit import AuditLog
 from sqlalchemy import select, func
 import hashlib, json
 from datetime import datetime, timezone
+from app.repositories.audits import get_last_audit_log
 
 async def calculate_audit_hash(prev_audit_entry: AuditLog, session: AsyncSession, audit_payload: dict, target_id: int, target_type: str, actor_id: str, action: str, actor_type: str):
    try:
@@ -62,4 +62,28 @@ def recompute_hash(audit_log: AuditLog):
       
       return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
    except Exception as e:
-      raise HTTPException(status_code=500, detail="Failed to recompute hash") 
+      raise ValueError("Failed to recompute hash") 
+
+async def create_and_verify_audit_log(session: AsyncSession, audit_payload: dict, target_id: int, target_type: str, actor_id: str, action: str, actor_type: str):
+   try:
+      prev_audit_entry = await get_last_audit_log(session)
+
+      if prev_audit_entry is not None:
+         if prev_audit_entry.current_hash != recompute_hash(prev_audit_entry):
+            raise ValueError("Invalid audit chain")
+      
+      audit_log = await calculate_audit_hash(prev_audit_entry, session, audit_payload, target_id, target_type, actor_id, action, actor_type)
+
+      session.add(audit_log)
+      await session.flush()
+
+      recomputed_hash = recompute_hash(audit_log)
+
+      if audit_log.current_hash != recomputed_hash:
+         raise ValueError("Audit log has been tampered") 
+
+      await session.commit()
+      return audit_log
+   except Exception as e:
+      await session.rollback()
+      raise 

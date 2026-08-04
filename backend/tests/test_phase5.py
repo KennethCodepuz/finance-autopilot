@@ -21,7 +21,7 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from app.models.audit import AuditLog
 from app.services.audit_service import (
     recompute_hash,
-    # create_and_verify_audit_log,
+    create_and_verify_audit_log,
 )
 # from app.workers.task import (
 #     verify_audit_chain_incremental,
@@ -140,83 +140,83 @@ def test_recompute_hash_detects_actor_tampering():
 # 2. create_and_verify_audit_log() tests
 # ---------------------------------------------------------------------------
 
-# @pytest.mark.asyncio
-# async def test_create_and_verify_creates_valid_chain(db_session: AsyncSession):
-#     """
-#     create_and_verify_audit_log should create a new AuditLog whose
-#     prev_hash points to the previous entry's current_hash, and whose
-#     current_hash is correctly computed.
-#     """
-#     # Create and save Row 1 (genesis)
-#     row1 = await create_and_verify_audit_log(
-#         session=db_session,
-#         audit_payload={"amount": 100.0, "payee": "Alice"},
-#         target_id=1,
-#         target_type="ledger",
-#         actor_id="agent_default",
-#         action="action_proposed",
-#         actor_type="agent",
-#     )
-#     db_session.add(row1)
-#     await db_session.flush()
+@pytest.mark.asyncio
+async def test_create_and_verify_creates_valid_chain(db_session: AsyncSession):
+    """
+    create_and_verify_audit_log should create a new AuditLog whose
+    prev_hash points to the previous entry's current_hash, and whose
+    current_hash is correctly computed.
+    """
+    # Create and save Row 1 (genesis)
+    row1 = await create_and_verify_audit_log(
+        session=db_session,
+        audit_payload={"amount": 100.0, "payee": "Alice"},
+        target_id=1,
+        target_type="ledger",
+        actor_id="agent_default",
+        action="action_proposed",
+        actor_type="agent",
+    )
+    db_session.add(row1)
+    await db_session.flush()
 
-#     # Create Row 2, linked to Row 1
-#     row2 = await create_and_verify_audit_log(
-#         session=db_session,
-#         audit_payload={"amount": 200.0, "payee": "Bob"},
-#         target_id=2,
-#         target_type="ledger",
-#         actor_id="human_default",
-#         action="action_approved",
-#         actor_type="human",
-#     )
-#     db_session.add(row2)
-#     await db_session.flush()
+    # Create Row 2, linked to Row 1
+    row2 = await create_and_verify_audit_log(
+        session=db_session,
+        audit_payload={"amount": 200.0, "payee": "Bob"},
+        target_id=2,
+        target_type="ledger",
+        actor_id="human_default",
+        action="action_approved",
+        actor_type="human",
+    )
+    db_session.add(row2)
+    await db_session.flush()
 
-#     # Row 1: genesis entry should have prev_hash = "0"
-#     assert row1.prev_hash == "0"
-#     assert recompute_hash(row1) == row1.current_hash
+    # Row 1: genesis entry should have prev_hash = "0"
+    assert row1.prev_hash == "0"
+    assert recompute_hash(row1) == row1.current_hash
 
-#     # Row 2: must link to Row 1
-#     assert row2.prev_hash == row1.current_hash
-#     assert recompute_hash(row2) == row2.current_hash
+    # Row 2: must link to Row 1
+    assert row2.prev_hash == row1.current_hash
+    assert recompute_hash(row2) == row2.current_hash
 
 
-# @pytest.mark.asyncio
-# async def test_create_and_verify_raises_on_broken_chain(db_session: AsyncSession):
-#     """
-#     If the last stored audit log in the database has been tampered with
-#     (its current_hash no longer matches its fields), create_and_verify_audit_log
-#     must raise an exception and refuse to write a new log linked to corrupted data.
-#     """
-#     # Write a valid Row 1
-#     row1 = await create_and_verify_audit_log(
-#         session=db_session,
-#         audit_payload={"amount": 100.0, "payee": "Alice"},
-#         target_id=1,
-#         target_type="ledger",
-#         actor_id="agent_default",
-#         action="action_proposed",
-#         actor_type="agent",
-#     )
-#     db_session.add(row1)
-#     await db_session.flush()
+@pytest.mark.asyncio
+async def test_create_and_verify_raises_on_broken_chain(db_session: AsyncSession):
+    """
+    If the last stored audit log in the database has been tampered with
+    (its current_hash no longer matches its fields), create_and_verify_audit_log
+    must raise an exception and refuse to write a new log linked to corrupted data.
+    """
+    # Write a valid Row 1
+    row1 = await create_and_verify_audit_log(
+        session=db_session,
+        audit_payload={"amount": 100.0, "payee": "Alice"},
+        target_id=1,
+        target_type="ledger",
+        actor_id="agent_default",
+        action="action_proposed",
+        actor_type="agent",
+    )
+    db_session.add(row1)
+    await db_session.flush()
 
-#     # Tamper with Row 1 by mutating its payload but keeping current_hash unchanged
-#     row1.payload = {"amount": 99999.0, "payee": "Attacker"}
-#     await db_session.flush()
+    # Tamper with Row 1 by mutating its payload but keeping current_hash unchanged
+    row1.payload = {"amount": 99999.0, "payee": "Attacker"}
+    await db_session.flush()
 
-#     # Attempting to create Row 2 must raise because Row 1 is corrupt
-#     with pytest.raises(Exception):
-#         await create_and_verify_audit_log(
-#             session=db_session,
-#             audit_payload={"amount": 200.0, "payee": "Bob"},
-#             target_id=2,
-#             target_type="ledger",
-#             actor_id="agent_default",
-#             action="action_proposed",
-#             actor_type="agent",
-#         )
+    # Attempting to create Row 2 must raise because Row 1 is corrupt
+    with pytest.raises(Exception):
+        await create_and_verify_audit_log(
+            session=db_session,
+            audit_payload={"amount": 200.0, "payee": "Bob"},
+            target_id=2,
+            target_type="ledger",
+            actor_id="agent_default",
+            action="action_proposed",
+            actor_type="agent",
+        )
 
 
 # # ---------------------------------------------------------------------------
