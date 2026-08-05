@@ -23,10 +23,10 @@ from app.services.audit_service import (
     recompute_hash,
     create_and_verify_audit_log,
 )
-# from app.workers.task import (
-#     verify_audit_chain_incremental,
-#     verify_audit_chain_full,
-# )
+from app.workers.task import (
+    verify_audit_chain_incremental,
+    verify_audit_chain_full,
+)
 
 
 # ---------------------------------------------------------------------------
@@ -219,135 +219,135 @@ async def test_create_and_verify_raises_on_broken_chain(db_session: AsyncSession
         )
 
 
-# # ---------------------------------------------------------------------------
-# # 3. verify_audit_chain_incremental job tests
-# # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# 3. verify_audit_chain_incremental job tests
+# ---------------------------------------------------------------------------
 
-# @pytest.mark.asyncio
-# async def test_incremental_verify_passes_clean_chain(db_session: AsyncSession):
-#     """
-#     Incremental verification should pass without raising for a clean chain.
-#     The checkpoint in Redis should be updated to the latest sequence number.
-#     """
-#     # Build a 3-entry chain directly in the DB
-#     prev_hash = "0"
-#     for i in range(1, 4):
-#         log = _make_audit_log(sequence_number=i, prev_hash=prev_hash)
-#         db_session.add(log)
-#         await db_session.flush()
-#         prev_hash = log.current_hash
-#     await db_session.commit()
+@pytest.mark.asyncio
+async def test_incremental_verify_passes_clean_chain(db_session: AsyncSession):
+    """
+    Incremental verification should pass without raising for a clean chain.
+    The checkpoint in Redis should be updated to the latest sequence number.
+    """
+    # Build a 3-entry chain directly in the DB
+    prev_hash = "0"
+    for i in range(1, 4):
+        log = _make_audit_log(sequence_number=i, prev_hash=prev_hash)
+        db_session.add(log)
+        await db_session.flush()
+        prev_hash = log.current_hash
+    await db_session.commit()
 
-#     mock_redis = AsyncMock()
-#     # Simulate checkpoint: start from 0 (no previous checkpoint)
-#     mock_redis.get = AsyncMock(return_value=None)
-#     mock_redis.set = AsyncMock()
+    mock_redis = AsyncMock()
+    # Simulate checkpoint: start from 0 (no previous checkpoint)
+    mock_redis.get = AsyncMock(return_value=None)
+    mock_redis.set = AsyncMock()
 
-#     ctx = {"session": db_session, "redis": mock_redis}
-#     # Should not raise
-#     await verify_audit_chain_incremental(ctx)
+    ctx = {"session": db_session, "redis": mock_redis}
+    # Should not raise
+    await verify_audit_chain_incremental(ctx)
 
-#     # Redis checkpoint should have been updated
-#     mock_redis.set.assert_called_once()
-#     # The saved checkpoint should be sequence_number=3 (the last row)
-#     call_args = mock_redis.set.call_args[0]
-#     assert int(call_args[1]) == 3
-
-
-# @pytest.mark.asyncio
-# async def test_incremental_verify_detects_tampering(db_session: AsyncSession):
-#     """
-#     If any row in the new batch has a mismatched hash, the incremental
-#     job must raise an exception (tamper alert).
-#     """
-#     # Row 1: clean
-#     log1 = _make_audit_log(sequence_number=1, prev_hash="0")
-#     db_session.add(log1)
-#     await db_session.flush()
-
-#     # Row 2: tampered payload but current_hash unchanged
-#     log2 = _make_audit_log(sequence_number=2, prev_hash=log1.current_hash)
-#     log2.payload = {"amount": 99999.0, "tampered": True}  # payload changed!
-#     db_session.add(log2)
-#     await db_session.flush()
-#     await db_session.commit()
-
-#     mock_redis = AsyncMock()
-#     mock_redis.get = AsyncMock(return_value=None)
-#     mock_redis.set = AsyncMock()
-
-#     ctx = {"session": db_session, "redis": mock_redis}
-
-#     with pytest.raises(Exception, match="[Tt]amper"):
-#         await verify_audit_chain_incremental(ctx)
+    # Redis checkpoint should have been updated
+    mock_redis.set.assert_called_once()
+    # The saved checkpoint should be sequence_number=3 (the last row)
+    call_args = mock_redis.set.call_args[0]
+    assert int(call_args[1]) == 3
 
 
-# # ---------------------------------------------------------------------------
-# # 4. verify_audit_chain_full job tests
-# # ---------------------------------------------------------------------------
+@pytest.mark.asyncio
+async def test_incremental_verify_detects_tampering(db_session: AsyncSession):
+    """
+    If any row in the new batch has a mismatched hash, the incremental
+    job must raise an exception (tamper alert).
+    """
+    # Row 1: clean
+    log1 = _make_audit_log(sequence_number=1, prev_hash="0")
+    db_session.add(log1)
+    await db_session.flush()
 
-# @pytest.mark.asyncio
-# async def test_full_verify_passes_clean_chain(db_session: AsyncSession):
-#     """
-#     Full scan should pass without raising for a clean chain.
-#     """
-#     prev_hash = "0"
-#     for i in range(1, 6):
-#         log = _make_audit_log(sequence_number=i, prev_hash=prev_hash)
-#         db_session.add(log)
-#         await db_session.flush()
-#         prev_hash = log.current_hash
-#     await db_session.commit()
+    # Row 2: tampered payload but current_hash unchanged
+    log2 = _make_audit_log(sequence_number=2, prev_hash=log1.current_hash)
+    log2.payload = {"amount": 99999.0, "tampered": True}  # payload changed!
+    db_session.add(log2)
+    await db_session.flush()
+    await db_session.commit()
 
-#     ctx = {"session": db_session}
-#     # Should not raise
-#     await verify_audit_chain_full(ctx)
+    mock_redis = AsyncMock()
+    mock_redis.get = AsyncMock(return_value=None)
+    mock_redis.set = AsyncMock()
 
+    ctx = {"session": db_session, "redis": mock_redis}
 
-# @pytest.mark.asyncio
-# async def test_full_verify_detects_historical_tampering(db_session: AsyncSession):
-#     """
-#     Full scan must catch tampering in an early historical row (e.g., Row 2 of 5),
-#     even if all newer rows are untouched.
-#     """
-#     logs = []
-#     prev_hash = "0"
-#     for i in range(1, 6):
-#         log = _make_audit_log(sequence_number=i, prev_hash=prev_hash)
-#         db_session.add(log)
-#         await db_session.flush()
-#         prev_hash = log.current_hash
-#         logs.append(log)
-#     await db_session.commit()
-
-#     # Tamper with Row 2 (historical) — payload changed, current_hash untouched
-#     logs[1].payload = {"amount": 99999.0, "tampered": True}
-#     await db_session.flush()
-#     await db_session.commit()
-
-#     ctx = {"session": db_session}
-
-#     with pytest.raises(Exception, match="[Tt]amper"):
-#         await verify_audit_chain_full(ctx)
+    with pytest.raises(Exception, match="[Tt]amper"):
+        await verify_audit_chain_incremental(ctx)
 
 
-# @pytest.mark.asyncio
-# async def test_full_verify_detects_broken_chain_link(db_session: AsyncSession):
-#     """
-#     Full scan must detect when a row's prev_hash doesn't match the previous
-#     row's current_hash (chain link is broken).
-#     """
-#     log1 = _make_audit_log(sequence_number=1, prev_hash="0")
-#     db_session.add(log1)
-#     await db_session.flush()
+# ---------------------------------------------------------------------------
+# 4. verify_audit_chain_full job tests
+# ---------------------------------------------------------------------------
 
-#     # Row 2 has an incorrect prev_hash (doesn't link to Row 1)
-#     log2 = _make_audit_log(sequence_number=2, prev_hash="definitely_not_row1_hash")
-#     db_session.add(log2)
-#     await db_session.flush()
-#     await db_session.commit()
+@pytest.mark.asyncio
+async def test_full_verify_passes_clean_chain(db_session: AsyncSession):
+    """
+    Full scan should pass without raising for a clean chain.
+    """
+    prev_hash = "0"
+    for i in range(1, 6):
+        log = _make_audit_log(sequence_number=i, prev_hash=prev_hash)
+        db_session.add(log)
+        await db_session.flush()
+        prev_hash = log.current_hash
+    await db_session.commit()
 
-#     ctx = {"session": db_session}
+    ctx = {"session": db_session}
+    # Should not raise
+    await verify_audit_chain_full(ctx)
 
-#     with pytest.raises(Exception, match="[Tt]amper|[Cc]hain"):
-#         await verify_audit_chain_full(ctx)
+
+@pytest.mark.asyncio
+async def test_full_verify_detects_historical_tampering(db_session: AsyncSession):
+    """
+    Full scan must catch tampering in an early historical row (e.g., Row 2 of 5),
+    even if all newer rows are untouched.
+    """
+    logs = []
+    prev_hash = "0"
+    for i in range(1, 6):
+        log = _make_audit_log(sequence_number=i, prev_hash=prev_hash)
+        db_session.add(log)
+        await db_session.flush()
+        prev_hash = log.current_hash
+        logs.append(log)
+    await db_session.commit()
+
+    # Tamper with Row 2 (historical) — payload changed, current_hash untouched
+    logs[1].payload = {"amount": 99999.0, "tampered": True}
+    await db_session.flush()
+    await db_session.commit()
+
+    ctx = {"session": db_session}
+
+    with pytest.raises(Exception, match="[Tt]amper"):
+        await verify_audit_chain_full(ctx)
+
+
+@pytest.mark.asyncio
+async def test_full_verify_detects_broken_chain_link(db_session: AsyncSession):
+    """
+    Full scan must detect when a row's prev_hash doesn't match the previous
+    row's current_hash (chain link is broken).
+    """
+    log1 = _make_audit_log(sequence_number=1, prev_hash="0")
+    db_session.add(log1)
+    await db_session.flush()
+
+    # Row 2 has an incorrect prev_hash (doesn't link to Row 1)
+    log2 = _make_audit_log(sequence_number=2, prev_hash="definitely_not_row1_hash")
+    db_session.add(log2)
+    await db_session.flush()
+    await db_session.commit()
+
+    ctx = {"session": db_session}
+
+    with pytest.raises(Exception, match="[Tt]amper|[Cc]hain"):
+        await verify_audit_chain_full(ctx)

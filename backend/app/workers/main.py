@@ -1,8 +1,7 @@
 import arq.connections
 
 from app.core.config import settings
-from app.workers.task import execute_ledger_entry
-from app.core.database import async_session_factory
+from app.workers.task import execute_ledger_entry, verify_audit_chain_full, verify_audit_chain_incremental
 
 
 async def startup(ctx: dict) -> None:
@@ -16,7 +15,7 @@ async def shutdown(ctx: dict) -> None:
 
 class WorkerSettings:
     """ARQ worker configuration."""
-    functions = [execute_ledger_entry]
+    functions = [execute_ledger_entry, verify_audit_chain_full, verify_audit_chain_incremental]
     on_startup = startup
     on_shutdown = shutdown
     redis_settings = arq.connections.RedisSettings.from_dsn(settings.redis_url)

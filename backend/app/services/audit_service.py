@@ -62,7 +62,7 @@ def recompute_hash(audit_log: AuditLog):
       
       return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
    except Exception as e:
-      raise ValueError("Failed to recompute hash") 
+      raise ValueError(f"Tamper detected: cannot recompute hash - {e}") 
 
 async def create_and_verify_audit_log(session: AsyncSession, audit_payload: dict, target_id: int, target_type: str, actor_id: str, action: str, actor_type: str):
    try:
