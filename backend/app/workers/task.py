@@ -5,7 +5,7 @@ from app.core.database import AsyncSessionLocal
 from app.models import IdempotencyKey, OutboxLedger
 from sqlalchemy import select
 from app.services.audit_service import create_and_verify_audit_log
-
+   
 
 async def execute_ledger_entry(ctx: dict, ledger_id: int):
    ledger_entry = None

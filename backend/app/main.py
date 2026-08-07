@@ -1,3 +1,4 @@
+from app.routes import audit
 from arq.connections import RedisSettings
 from arq import create_pool
 from contextlib import asynccontextmanager
@@ -36,11 +37,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-    
-
 
 app.include_router(plaid.router)
 app.include_router(approvals.router)
+app.include_router(audit.router)
 
 
 @app.get("/api/health")
