@@ -44,7 +44,23 @@ async def propose_action(action_type, amount, payee, account_id, session: AsyncS
       session.add(ledger_entry)
       await session.flush()
 
-      await create_and_verify_audit_log(session, audit_payload=payload, target_id=ledger_entry.id, target_type="ledger", actor_id="agent_default", action="proposal.created", actor_type="agent")
+      redis_payload = await create_and_verify_audit_log(session, audit_payload=payload, target_id=ledger_entry.id, target_type="ledger", actor_id="agent_default", action="proposal.created", actor_type="agent")
+      
+      event_data = {
+         "event_type": "proposal.created",
+         "timestamp": datetime.now(timezone.utc).isoformat(),
+         "payload": {
+            "ledger_id": ledger_entry.id,
+            "action_type": ledger_entry.action_type,
+            "amount": amount,
+            "payee": payee,
+            "account_id": account_id,
+            "risk_score": ledger_entry.risk_score,
+            "risk_tier": ledger_entry.risk_tier,
+            "status": ledger_entry.status
+         }
+      }
+      await redis.publish("activity_feed", json.dumps(event_data))
 
       if risk_score["tier"] == "low":
          await redis.enqueue_job("execute_ledger_entry", ledger_entry.id)

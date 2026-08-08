@@ -1,11 +1,14 @@
 
+import json
+from datetime import timezone, datetime
+from app.core import redis
 from app.services.audit_service import recompute_hash
 from app.models import AuditLog
 from app.core.database import AsyncSessionLocal
 from app.models import IdempotencyKey, OutboxLedger
 from sqlalchemy import select
 from app.services.audit_service import create_and_verify_audit_log
-   
+
 
 async def execute_ledger_entry(ctx: dict, ledger_id: int):
    ledger_entry = None
@@ -33,7 +36,6 @@ async def execute_ledger_entry(ctx: dict, ledger_id: int):
       ledger_entry.status = "processing"
       await session.flush()
 
-      print("Success")
 
       ledger_entry.status = "confirmed"
       idempotency_key_response = await session.execute(
@@ -49,6 +51,24 @@ async def execute_ledger_entry(ctx: dict, ledger_id: int):
       await session.flush()
 
       audit_log = await create_and_verify_audit_log(session, audit_payload=ledger_entry.payload, target_id=ledger_entry.id, target_type="ledger", actor_id="agent_default", action="ledger_entry.confirmed", actor_type="agent")
+      
+      redis_conn = ctx.get("redis")
+      if redis_conn:
+         event_data = {
+            "event_type": "ledger.confirmed",
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "payload": {
+               "ledger_id": ledger_entry.id,
+               "action_type": ledger_entry.action_type,
+               "amount": ledger_entry.payload.get("amount") if isinstance(ledger_entry.payload, dict) else 0.0,
+               "payee": ledger_entry.payload.get("payee") if isinstance(ledger_entry.payload, dict) else "",
+               "account_id": ledger_entry.payload.get("account_id") if isinstance(ledger_entry.payload, dict) else 0,
+               "risk_score": ledger_entry.risk_score,
+               "risk_tier": ledger_entry.risk_tier,
+               "status": "confirmed"
+            }
+         }
+         await redis_conn.publish("activity_feed", json.dumps(event_data))
 
       return audit_log
    except Exception as e:

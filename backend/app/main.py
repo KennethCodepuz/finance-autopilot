@@ -9,6 +9,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.routes import plaid
 from app.core.config import settings
 from app.routes import approvals
+from app.routes import websockets
 
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger(__name__)
@@ -41,6 +42,7 @@ app.add_middleware(
 app.include_router(plaid.router)
 app.include_router(approvals.router)
 app.include_router(audit.router)
+app.include_router(websockets.router)
 
 
 @app.get("/api/health")

@@ -21,6 +21,7 @@ from app.main import app
 from app.models.audit import AuditLog
 from app.services.audit_service import create_and_verify_audit_log
 from app.core.database import get_db
+from app.core.redis import get_redis_ws
 
 # ---------------------------------------------------------------------------
 # Test Data Fixtures & Setup
@@ -93,7 +94,6 @@ async def test_get_audit_logs_pagination_and_verified(client: TestClient, db_ses
 
     # Test default query (newest sequence first)
     res = client.get("/api/audit/logs")
-    print(res)
     assert res.status_code == 200
     data = res.json()
     assert len(data) == 3
@@ -180,51 +180,58 @@ async def test_get_audit_logs_detects_tampered_log(client: TestClient, db_sessio
     assert data[0]["current_hash"] == "0000000000000000000000000000000000000000000000000000000000000000"
 
 
-# # ---------------------------------------------------------------------------
-# # 2. Activity Feed WebSocket Tests
-# # ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# 2. Activity Feed WebSocket Tests
+# ---------------------------------------------------------------------------
 
-# @pytest.mark.asyncio
-# async def test_websocket_activity_feed_stream(client: TestClient):
-#     """
-#     Test WS /api/ws/activity receives streamed messages published to the Redis 'activity_feed' channel.
-#     """
-#     mock_event = {
-#         "event_type": "proposal.created",
-#         "timestamp": datetime.now(timezone.utc).isoformat(),
-#         "payload": {
-#             "ledger_id": 1,
-#             "action_type": "transfer",
-#             "amount": 1500.0,
-#             "payee": "Mock Supplier",
-#             "risk_score": 25,
-#             "risk_tier": "medium",
-#             "status": "pending_approval"
-#         }
-#     }
+@pytest.mark.asyncio
+async def test_websocket_activity_feed_stream(client: TestClient):
+    """
+    Test WS /api/ws/activity receives streamed messages published to the Redis 'activity_feed' channel.
+    """
+    mock_event = {
+        "event_type": "proposal.created",
+        "timestamp": datetime.now(timezone.utc).isoformat(),
+        "payload": {
+            "ledger_id": 1,
+            "action_type": "transfer",
+            "amount": 1500.0,
+            "payee": "Mock Supplier",
+            "risk_score": 25,
+            "risk_tier": "medium",
+            "status": "pending_approval"
+        }
+    }
 
-#     # Mock Redis pubsub object for TestClient websocket execution
-#     class AsyncPubSubMock:
-#         async def subscribe(self, channel):
-#             pass
-#         async def unsubscribe(self, channel):
-#             pass
-#         async def get_message(self, ignore_subscribe_messages=True, timeout=1.0):
-#             return {
-#                 "type": "message",
-#                 "data": json.dumps(mock_event).encode("utf-8")
-#             }
+    # Mock Redis pubsub object for TestClient websocket execution
+    class AsyncPubSubMock:
+        async def subscribe(self, channel):
+            pass
+        async def unsubscribe(self, channel):
+            pass
+        async def get_message(self, ignore_subscribe_messages=True, timeout=1.0):
+            return {
+                "type": "message",
+                "data": json.dumps(mock_event).encode("utf-8")
+            }
 
-#     class AsyncRedisMock:
-#         def pubsub(self):
-#             return AsyncPubSubMock()
-#         async def close(self):
-#             pass
+    class AsyncRedisMock:
+        def pubsub(self):
+            return AsyncPubSubMock()
+        async def close(self):
+            pass
 
-#     with patch("redis.asyncio.Redis.from_url", return_value=AsyncRedisMock()):
-#         with client.websocket_connect("/api/ws/activity") as websocket:
-#             data = websocket.receive_json()
-#             assert data["event_type"] == "proposal.created"
-#             assert data["payload"]["ledger_id"] == 1
-#             assert data["payload"]["amount"] == 1500.0
-#             assert data["payload"]["payee"] == "Mock Supplier"
+    async def _get_redis_ws_override():
+        return AsyncRedisMock()
+
+    app.dependency_overrides[get_redis_ws] = _get_redis_ws_override
+    try:
+        with patch("redis.asyncio.Redis.from_url", return_value=AsyncRedisMock()):
+            with client.websocket_connect("/api/ws/activity") as websocket:
+                data = websocket.receive_json()
+                assert data["event_type"] == "proposal.created"
+                assert data["payload"]["ledger_id"] == 1
+                assert data["payload"]["amount"] == 1500.0
+                assert data["payload"]["payee"] == "Mock Supplier"
+    finally:
+        app.dependency_overrides.pop(get_redis_ws, None)
