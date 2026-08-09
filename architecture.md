@@ -105,7 +105,7 @@ React. Required screens:
   - Cryptographic hash-chaining logic for audit events (`prev_hash` calculation)
   - ARQ background periodic job for hash-chain integrity verification & alerting
 
-- `[ ]` **Phase 6: Next.js Dashboard UI & WebSocket Live Feed**
+- `[x]` **Phase 6: Next.js Dashboard UI & WebSocket Live Feed**
   - WebSocket backend router for real-time agent activity streaming
   - **Accounts Overview Screen** (Balances & transactions live sync)
   - **Pending Approvals Screen** (Human approval queue control surface)
@@ -127,6 +127,6 @@ React. Required screens:
 
 ```txt
 Architecture Open Questions Resolved: 6 / 6
-Current Active Phase: Phase 5 — Tamper-Evident Audit Trail System
-Next Step: Implement cryptographic hash-chaining logic for audit events.
+Current Active Phase: Phase 7 — LLM Agent Integration & Tool Calling
+Next Step: Implement AI Agent service with tool-calling capabilities (Categorize, Transfer, Flag Anomaly).
 ```

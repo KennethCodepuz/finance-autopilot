@@ -9,7 +9,7 @@ from app.services.audit_service import recompute_hash
 router = APIRouter(prefix="/api/audit", tags=["Audit"])
 
 @router.get("/logs")
-async def get_audit_logs(offset: int = Query(default = 0, ge = 0), limit: int = Query(default = 10, ge = 1, le = 100), actor_type: str | None = None, action: str | None = None, target_type: str | None = None, target_id: str | None = None, db: AsyncSession = Depends(get_db)):
+async def get_audit_logs(offset: int = Query(default = 0, ge = 0), limit: int = Query(default = 10, ge = 1, le = 100), actor_type: str | None = None, action: str | None = None, db: AsyncSession = Depends(get_db)):
 
    try:
       audits_response = await audits_repository.get_audit_logs(offset, limit, actor_type, action, db)

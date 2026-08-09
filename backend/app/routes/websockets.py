@@ -17,7 +17,8 @@ async def websocket_activity_feed(websocket: WebSocket, db: AsyncSession = Depen
       while True:
          message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
          if message is not None:
-            await websocket.send_json({"event_type": "proposal.created", "payload": {"ledger_id": 1, "action_type": "transfer", "amount": 1500.0, "payee": "Mock Supplier", "risk_score": 25, "risk_tier": "medium", "status": "pending_approval"}})
+            data_string = message["data"].decode("utf-8")
+            await websocket.send_json(data_string)
    except WebSocketDisconnect:
       await pubsub.unsubscribe("activity_feed")
       await pubsub.close()
