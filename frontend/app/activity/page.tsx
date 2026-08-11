@@ -5,8 +5,11 @@ import { useWebSocket } from "../websocket/websocket";
 
 export default function ActivityPage() {
   const [activityFeed, setActivityFeed] = useState<any[]>([]);
-  const ws = useWebSocket();
+  const [promptInput, setPromptInput] = useState("");
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [agentResponse, setAgentResponse] = useState<any>(null);
 
+  const ws = useWebSocket();
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:8000";
 
   // 1. Fetch initial historical logs on mount
@@ -50,14 +53,39 @@ export default function ActivityPage() {
     };
   }, [ws]);
 
+  const handlePromptSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!promptInput.trim() || isSubmitting) return;
+
+    setIsSubmitting(true);
+    setAgentResponse(null);
+
+    try {
+      const res = await fetch(`${backendUrl}/api/agent/prompt`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ prompt: promptInput.trim() }),
+      });
+      const data = await res.json();
+      setAgentResponse(data);
+      setPromptInput("");
+    } catch (err) {
+      console.error("Error running agent prompt:", err);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   const getEventBadgeClass = (eventType: string) => {
     switch (eventType) {
       case "proposal.created":
+      case "agent.thought":
         return "status-info";
       case "proposal.approved":
       case "proposal_approved":
       case "ledger.confirmed":
       case "ledger_entry.confirmed":
+      case "transaction.categorized":
         return "status-completed";
       case "proposal.rejected":
       case "proposal_rejected":
@@ -74,6 +102,10 @@ export default function ActivityPage() {
     const action = payload.action_type || evt.event_type || "action";
 
     switch (evt.event_type) {
+      case "agent.thought":
+        return `AI Thought: ${payload.thought || "Processing task..."}`;
+      case "transaction.categorized":
+        return `Categorized transaction #${payload.transaction_id} as '${payload.new_category}'`;
       case "proposal.created":
         return `AI Agent proposed ${action} of ${amount} to ${payee}`;
       case "proposal.approved":
@@ -94,8 +126,8 @@ export default function ActivityPage() {
     <div>
       <div className="header-row" style={{ marginBottom: "24px" }}>
         <div>
-          <h1 className="page-title">Agent Activity Feed</h1>
-          <p className="page-subtitle">Real-time event log streaming proposals and ledger actions via WebSocket.</p>
+          <h1 className="page-title">Agent Activity Feed & Command Console</h1>
+          <p className="page-subtitle">Interact with the AI agent and stream live real-time proposals, tool calls, and ledger events.</p>
         </div>
         <div>
           <span className="pill-status status-completed" style={{ padding: "6px 14px" }}>
@@ -112,10 +144,72 @@ export default function ActivityPage() {
         </div>
       </div>
 
+      {/* AI Agent Interactive Prompt Console */}
+      <div className="bento-card" style={{ padding: "24px", marginBottom: "24px" }}>
+        <h3 style={{ fontSize: "1.1rem", fontWeight: "600", marginBottom: "8px", color: "var(--text-main)" }}>
+          Instruct Finance Agent
+        </h3>
+        <p style={{ fontSize: "0.88rem", color: "var(--text-muted)", marginBottom: "16px" }}>
+          Type a natural language instruction (e.g. <em>&quot;Move $600 to my savings account for rent&quot;</em> or <em>&quot;Categorize transaction #1 as Dining&quot;</em>).
+        </p>
+
+        <form onSubmit={handlePromptSubmit} style={{ display: "flex", gap: "12px" }}>
+          <input
+            type="text"
+            placeholder="What would you like the agent to analyze or do?"
+            value={promptInput}
+            onChange={(e) => setPromptInput(e.target.value)}
+            style={{
+              flexGrow: 1,
+              padding: "12px 16px",
+              borderRadius: "8px",
+              border: "1px solid var(--border-color)",
+              backgroundColor: "var(--bg-elevated)",
+              color: "var(--text-main)",
+              fontSize: "0.95rem",
+              outline: "none"
+            }}
+          />
+          <button
+            type="submit"
+            disabled={isSubmitting || !promptInput.trim()}
+            style={{
+              padding: "12px 24px",
+              borderRadius: "8px",
+              backgroundColor: isSubmitting ? "var(--border-color)" : "var(--primary-color, #2563eb)",
+              color: "#ffffff",
+              fontWeight: "600",
+              border: "none",
+              cursor: isSubmitting ? "not-allowed" : "pointer",
+              transition: "background-color 0.2s"
+            }}
+          >
+            {isSubmitting ? "Processing..." : "Run Agent"}
+          </button>
+        </form>
+
+        {agentResponse && (
+          <div style={{ marginTop: "20px", padding: "16px", borderRadius: "8px", backgroundColor: "var(--bg-subtle, #f8fafc)", border: "1px solid var(--border-color)" }}>
+            <div style={{ fontWeight: "600", fontSize: "0.92rem", color: "var(--text-main)", marginBottom: "6px" }}>
+              Agent Output Summary:
+            </div>
+            <p style={{ fontSize: "0.88rem", color: "var(--text-muted)", marginBottom: "10px" }}>
+              {agentResponse.agent_thought}
+            </p>
+            {agentResponse.tools_called?.map((tc: any, i: number) => (
+              <div key={i} style={{ fontSize: "0.85rem", padding: "8px 12px", borderRadius: "6px", backgroundColor: "var(--bg-elevated)", border: "1px solid var(--border-color)", marginTop: "6px" }}>
+                <strong>Tool Invoked:</strong> <code>{tc.tool_name}</code> — {tc.message}
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Activity Feed */}
       <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
         {activityFeed.length === 0 ? (
           <div className="bento-card" style={{ padding: "32px", textAlign: "center", color: "var(--text-muted)" }}>
-            Listening for live WebSocket events... Try approving a proposal or creating a proposal to see live events stream in!
+            Listening for live WebSocket events... Instruct the agent or approve proposals to watch live events stream in!
           </div>
         ) : (
           activityFeed.map((evt, idx) => {

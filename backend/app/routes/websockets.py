@@ -18,7 +18,7 @@ async def websocket_activity_feed(websocket: WebSocket, db: AsyncSession = Depen
          message = await pubsub.get_message(ignore_subscribe_messages=True, timeout=1.0)
          if message is not None:
             data_string = message["data"].decode("utf-8")
-            await websocket.send_json(data_string)
+            await websocket.send_text(data_string)
    except WebSocketDisconnect:
       await pubsub.unsubscribe("activity_feed")
       await pubsub.close()

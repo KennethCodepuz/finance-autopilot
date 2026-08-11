@@ -112,9 +112,10 @@ React. Required screens:
   - **Audit Trail Viewer** (Filterable timeline & cryptographic verification status)
   - **Agent Activity Feed** (Live WebSocket stream)
 
-- `[ ]` **Phase 7: LLM Agent Integration & Tool Calling**
+- `[x]` **Phase 7: LLM Agent Integration & Tool Calling**
   - AI Agent service with tool-calling capabilities (Categorize, Transfer, Flag Anomaly)
   - Integration with Risk Evaluator & Approval Queue
+  - Interactive Agent Prompt Console & Live WebSocket streaming
 
 - `[ ]` **Phase 8: Testing, Security, Polish & Deployment**
   - Unit & integration tests (`pytest`)
@@ -127,6 +128,6 @@ React. Required screens:
 
 ```txt
 Architecture Open Questions Resolved: 6 / 6
-Current Active Phase: Phase 7 — LLM Agent Integration & Tool Calling
-Next Step: Implement AI Agent service with tool-calling capabilities (Categorize, Transfer, Flag Anomaly).
+Current Active Phase: Phase 8 — Testing, Security, Polish & Deployment
+Next Step: Comprehensive test suite verification, security auditing, and Render container deployment.
 ```

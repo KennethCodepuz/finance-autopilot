@@ -8,7 +8,10 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from app.routes import plaid
 from app.core.config import settings
+from app.routes import agent
 from app.routes import approvals
+from app.routes import audit
+from app.routes import plaid
 from app.routes import websockets
 
 logging.basicConfig(level=settings.log_level)
@@ -39,6 +42,7 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+app.include_router(agent.router)
 app.include_router(plaid.router)
 app.include_router(approvals.router)
 app.include_router(audit.router)
