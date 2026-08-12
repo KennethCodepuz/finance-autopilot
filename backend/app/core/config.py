@@ -1,3 +1,5 @@
+import re
+from pydantic import field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
@@ -6,6 +8,16 @@ class Settings(BaseSettings):
 
     # Database
     database_url: str
+
+    @field_validator("database_url", mode="after")
+    @classmethod
+    def sanitize_database_url(cls, v: str) -> str:
+        """Fixes Neon / PostgreSQL URL query parameters for asyncpg compatibility."""
+        if "sslmode=" in v:
+            v = v.replace("sslmode=require", "ssl=require").replace("sslmode=prefer", "ssl=prefer").replace("sslmode=disable", "ssl=disable")
+        if "channel_binding=" in v:
+            v = re.sub(r"[?&]channel_binding=[^&]+", "", v)
+        return v
 
     # Redis
     redis_url: str = "redis://localhost:6379"
