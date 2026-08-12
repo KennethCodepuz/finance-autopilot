@@ -1,6 +1,6 @@
 from datetime import date
 from typing import Optional
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 
 # Request Schemas
@@ -26,6 +26,8 @@ class SyncRequest(BaseModel):
 
 
 class AccountResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     plaid_account_id: str
     name: str
@@ -37,11 +39,10 @@ class AccountResponse(BaseModel):
     balance_current: Optional[float] = None
     iso_currency_code: str
 
-    class Config:
-        from_attributes = True
-
 
 class TransactionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     account_id: int
     plaid_transaction_id: str
@@ -51,9 +52,6 @@ class TransactionResponse(BaseModel):
     merchant_name: Optional[str] = None
     category: Optional[str] = None
     pending: bool
-
-    class Config:
-        from_attributes = True
 
 
 class SyncResponse(BaseModel):

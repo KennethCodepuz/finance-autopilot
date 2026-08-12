@@ -1,0 +1,57 @@
+services:
+  # 1. FastAPI Web Service
+  - type: web
+    name: finance-autopilot-backend
+    runtime: python
+    buildCommand: "uv sync --frozen"
+    startCommand: "uv run alembic upgrade head && uv run uvicorn app.main:app --host 0.0.0.0 --port $PORT"
+    rootDir: backend
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false # Set in Render Dashboard (Neon PostgreSQL connection string)
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: finance-autopilot-redis
+          property: connectionString
+      - key: SECRET_KEY
+        generateValue: true
+      - key: OPENAI_API_KEY
+        sync: false # Set in Render Dashboard
+      - key: PLAID_CLIENT_ID
+        sync: false # Set in Render Dashboard
+      - key: PLAID_SECRET
+        sync: false # Set in Render Dashboard
+      - key: PLAID_ENV
+        value: sandbox
+
+  # 2. ARQ Background Worker Service
+  - type: worker
+    name: finance-autopilot-worker
+    runtime: python
+    buildCommand: "uv sync --frozen"
+    startCommand: "uv run python -m arq app.workers.main.WorkerSettings"
+    rootDir: backend
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: DATABASE_URL
+        sync: false # Set in Render Dashboard (Neon PostgreSQL connection string)
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: finance-autopilot-redis
+          property: connectionString
+      - key: OPENAI_API_KEY
+        sync: false # Set in Render Dashboard
+      - key: PLAID_CLIENT_ID
+        sync: false # Set in Render Dashboard
+      - key: PLAID_SECRET
+        sync: false # Set in Render Dashboard
+
+  # 3. Redis Service
+  - type: redis
+    name: finance-autopilot-redis
+    ipAllowList: [] # Internal access only

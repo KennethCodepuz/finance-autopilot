@@ -1,5 +1,5 @@
 from datetime import datetime
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 from typing import List, Optional
 
 class ActionProposalRequest(BaseModel):
@@ -15,6 +15,8 @@ class ActionProposalResponse(BaseModel):
     status: str
 
 class PendingApprovalItem(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
     id: int
     action_type: str
     amount: float
@@ -22,6 +24,3 @@ class PendingApprovalItem(BaseModel):
     risk_score: int
     status: str
     created_at: datetime
-
-    class Config:
-        from_attributes = True

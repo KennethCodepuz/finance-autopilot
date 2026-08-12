@@ -9,6 +9,7 @@ dependencies = [
     "asyncpg>=0.31.0",
     "fastapi[standard]>=0.139.2",
     "httpx>=0.28.1",
+    "openai>=2.53.0",
     "passlib[bcrypt]>=1.7.4",
     "plaid-python>=40.1.0",
     "pydantic-settings>=2.14.2",

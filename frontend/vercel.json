@@ -1,0 +1,9 @@
+{
+  "framework": "nextjs",
+  "buildCommand": "pnpm build",
+  "devCommand": "pnpm dev",
+  "installCommand": "pnpm install",
+  "env": {
+    "NEXT_PUBLIC_BACKEND_URL": "https://finance-autopilot-backend.onrender.com"
+  }
+}
