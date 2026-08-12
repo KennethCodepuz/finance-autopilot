@@ -1,13 +1,13 @@
 import arq.connections
 
 from app.core.config import settings
+from app.core.redis import parse_redis_settings
 from app.workers.task import execute_ledger_entry, verify_audit_chain_full, verify_audit_chain_incremental
 from arq import cron
 
 
 async def startup(ctx: dict) -> None:
     """Runs once when the worker starts."""
-    
     pass
 
 
@@ -24,6 +24,6 @@ class WorkerSettings:
     ]
     on_startup = startup
     on_shutdown = shutdown
-    redis_settings = arq.connections.RedisSettings.from_dsn(settings.redis_url)
+    redis_settings = parse_redis_settings(settings.redis_url)
     max_jobs = 1
     job_timeout = 300  # 5 minutes

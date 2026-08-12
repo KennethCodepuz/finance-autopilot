@@ -13,6 +13,8 @@ RUN uv sync --frozen --no-dev
 
 # Copy application code
 COPY app/ ./app/
+COPY alembic.ini ./
+COPY migrations/ ./migrations/
 
 ENV PATH="/app/.venv/bin:$PATH"
 

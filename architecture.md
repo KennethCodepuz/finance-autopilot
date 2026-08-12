@@ -49,7 +49,7 @@ React. Required screens:
 | Database                | PostgreSQL + SQLAlchemy ORM                                                        | 2026-07-19 (impl)                |
 | Queue / background jobs | ARQ + Redis                                                                        | 2026-07-19 (Decision 2 + impl)   |
 | Containerization        | Docker                                                                             | 2026-07-19 (impl)                |
-| Deployment              | Render                                                                             | 2026-07-19 (impl)                |
+| Deployment              | Render Free Tier (Backend & Worker) + Neon (DB) + Vercel (Frontend)                | 2026-08-12 (updated)             |
 | Real-time feed          | WebSockets                                                                         | 2026-07-19 (impl)                |
 | Idempotency             | UUID + DB unique constraint                                                        | 2026-07-19 (Decision 1)          |
 | Audit trail storage     | Append-only table + Hash chaining + ARQ verification job                           | 2026-07-19 (Decision 3)          |

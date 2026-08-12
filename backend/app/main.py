@@ -13,13 +13,14 @@ from app.routes import approvals
 from app.routes import audit
 from app.routes import plaid
 from app.routes import websockets
+from app.core.redis import parse_redis_settings
 
 logging.basicConfig(level=settings.log_level)
 logger = logging.getLogger(__name__)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-   app.state.redis = await create_pool(RedisSettings.from_dsn(settings.redis_url))
+   app.state.redis = await create_pool(parse_redis_settings(settings.redis_url))
    
    yield 
 
